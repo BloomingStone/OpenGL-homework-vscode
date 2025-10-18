@@ -3,10 +3,7 @@
   "configurePresets": [
     {
       "name": "default",
-      "inherits": "vcpkg",
-      "environment": {
-        "VCPKG_ROOT": "D:/dev/vcpkg"
-      }
+      "inherits": "vcpkg"
     }
   ]
 }
