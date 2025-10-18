@@ -1,12 +1,21 @@
 {
     "vcpkg.target.defaultTriplet": "x64-mingw-static",
     "vcpkg.target.hostTriplet": "x64-mingw-static",
-    "vcpkg.target.useStaticLib": true,
+    "vcpkg.target.useStaticLib": false,
     "cmake.configureArgs": [
-        "-DVCPKG_TARGET_TRIPLET=x64-mingw-static"
+        "-DVCPKG_PREFER_SYSTEM_LIBS=OFF",
+        "-DVCPKG_TARGET_TRIPLET=x64-mingw-static",
+        "-DVCPKG_MANIFEST_MODE=ON"
     ],
     "files.associations": {
         "string": "cpp",
         "iostream": "cpp"
-    }
+    },
+    "vcpkg.target.useManifest": true,
+    "vcpkg.general.enable": true,
+    "cmake.configureSettings": {
+        "CMAKE_TOOLCHAIN_FILE": "D:\\dev\\vcpkg/scripts/buildsystems/vcpkg.cmake"
+    },
+    "vcpkg.target.installDependencies": true,
+    "vcpkg.target.preferSystemLibs": false
 }
