@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+        "name": "Debug MyGLProject",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/build/MyGLProject.exe",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "preLaunchTask": "CMake Build [Debug]"
+    },
+    {
+        "name": "[NoBuild] Debug MyGLProject",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/build/MyGLProject.exe",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}"
+    },
+    {
+        "type": "cmake",
+        "request": "launch",
+        "name": "Debug portfile(s)",
+        "cmakeDebugType": "external",
+        "pipeName": "\\\\.\\pipe\\vcpkg_ext_portfile_dbg",
+        "preLaunchTask": "Debug vcpkg commands"
+    }
+]
+}

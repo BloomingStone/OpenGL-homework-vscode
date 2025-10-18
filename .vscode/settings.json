@@ -1,0 +1,13 @@
+{
+    "C_Cpp.default.compilerPath": "D:/MinGW/bin/g++.exe",
+    "vcpkg.target.defaultTriplet": "x64-mingw-static",
+    "vcpkg.target.hostTriplet": "x64-mingw-static",
+    "vcpkg.target.useStaticLib": true,
+    "cmake.configureArgs": [
+        "-DVCPKG_TARGET_TRIPLET=x64-mingw-static"
+    ],
+    "files.associations": {
+        "string": "cpp",
+        "iostream": "cpp"
+    }
+}
