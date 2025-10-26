@@ -18,7 +18,7 @@ GLuint vbo[numVBOs];
 //导入着色器，初始化窗口
 void init(GLFWwindow* window) 
 {
-	renderingProgram = Utils::createShaderProgram("shaders/vertShader.glsl", "shaders/fragShader.glsl");
+	renderingProgram = Utils::createShaderProgram("vertShader.glsl", "fragShader.glsl");
 
 	float vertices[6] = {
 		-1.0f, -1.0f,

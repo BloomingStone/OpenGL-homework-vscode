@@ -1,210 +1,161 @@
-#include <GL\glew.h>
-#include <GLFW\glfw3.h>
-#include <SOIL2\soil2.h>
-#include <string>
-#include <iostream>
-#include <sstream>
-#include <filesystem>
-#include <fstream>
-#include <cmath>
-#include <glm\glm.hpp>
-#include <glm\gtc\type_ptr.hpp> // glm::value_ptr
-#include <glm\gtc\matrix_transform.hpp> // glm::translate, glm::rotate, glm::scale, glm::perspective
-#include <windows.h>
 #include "Utils.h"
-
-
-Utils::Utils() {}
 
 namespace fs = std::filesystem;
 
-std::string Utils::readShaderFile(fs::path filePath) {
-	std::string content;
-	std::ifstream fileStream(filePath, std::ios::in);
-	std::string line = "";
-	while (!fileStream.eof()) {
-		getline(fileStream, line);
-		content.append(line + "\n");
-	}
-	fileStream.close();
-	return content;
+// ========== 工具函数 ==========
+
+fs::path Utils::getExecutableDir() {
+#ifdef _WIN32
+    wchar_t exePath[MAX_PATH];
+    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    return fs::path(exePath).parent_path();
+#elif __APPLE__
+    char exePath[PATH_MAX];
+    uint32_t size = sizeof(exePath);
+    if (_NSGetExecutablePath(exePath, &size) != 0)
+        throw std::runtime_error("Buffer too small for executable path");
+    return fs::canonical(fs::path(exePath)).parent_path();
+#elif __linux__
+    return fs::canonical(fs::read_symlink("/proc/self/exe")).parent_path();
+#else
+    static_assert(false, "Unsupported platform");
+#endif
 }
 
+std::string Utils::readShaderFile(const fs::path& filePath) {
+    std::ifstream file{filePath};
+    if (!file.is_open()) {
+        throw std::runtime_error(std::format("Failed to open shader file: {}", filePath.string()));
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+}
+
+// ========== OpenGL 错误检查与日志 ==========
+
 bool Utils::checkOpenGLError() {
-	bool foundError = false;
-	int glErr = glGetError();
-	while (glErr != GL_NO_ERROR) {
-		std::cout << "glError: " << glErr << std::endl;
-		foundError = true;
-		glErr = glGetError();
-	}
-	return foundError;
+    auto foundError{false};
+    for (GLenum err; (err = glGetError()) != GL_NO_ERROR;) {
+        std::cerr << std::format("glError: {}\n", err);
+        foundError = true;
+    }
+    return foundError;
 }
 
 void Utils::printShaderLog(GLuint shader) {
-	int len = 0;
-	int chWrittn = 0;
-	char *log;
-	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
-	if (len > 0) {
-		log = (char *)malloc(len);
-		glGetShaderInfoLog(shader, len, &chWrittn, log);
-		std::cout << "Shader Info Log: " << log << std::endl;
-		free(log);
-	}
+    GLint len{0};
+    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+    if (len > 1) {
+        std::string log(len, '\0');
+        glGetShaderInfoLog(shader, len, nullptr, log.data());
+        std::cerr << std::format("Shader Info Log:\n{}\n", log);
+    }
 }
 
-GLuint Utils::prepareShader(int shaderTYPE, const char *shaderPath)
-{
-    #ifdef _WIN32
-        wchar_t  exePath[MAX_PATH];
-        GetModuleFileNameW(NULL, exePath, MAX_PATH);
-        fs::path exeDir = fs::path(exePath).parent_path();
-	#elif __APPLE__
-		fs::path exeDir = fs::path(fs::canonical("/proc/self/exe")).parent_path();
-	#elif __linux__
-		fs::path exeDir = fs::path(fs::canonical("/proc/self/exe")).parent_path();
-    #endif
-
-	GLint shaderCompiled;
-	std::string shaderStr = readShaderFile(exeDir / std::string{shaderPath});
-	const char *shaderSrc = shaderStr.c_str();
-	GLuint shaderRef = glCreateShader(shaderTYPE);
-	glShaderSource(shaderRef, 1, &shaderSrc, NULL);
-	glCompileShader(shaderRef);
-	checkOpenGLError();
-	glGetShaderiv(shaderRef, GL_COMPILE_STATUS, &shaderCompiled);
-	if (shaderCompiled != 1)
-	{
-		if (shaderTYPE == 35633) std::cout << "Vertex ";
-		if (shaderTYPE == 36488) std::cout << "Tess Control ";
-		if (shaderTYPE == 36487) std::cout << "Tess Eval ";
-		if (shaderTYPE == 36313) std::cout << "Geometry ";
-		if (shaderTYPE == 35632) std::cout << "Fragment ";
-		std::cout << "shader compilation error." << std::endl;
-		printShaderLog(shaderRef);
-	}
-	return shaderRef;
+void Utils::printProgramLog(GLuint prog) {
+    GLint len{0};
+    glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &len);
+    if (len > 1) {
+        std::string log(len, '\0');
+        glGetProgramInfoLog(prog, len, nullptr, log.data());
+        std::cerr << std::format("Program Info Log:\n{}\n", log);
+    }
 }
 
-void Utils::printProgramLog(int prog) {
-	int len = 0;
-	int chWrittn = 0;
-	char *log;
-	glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &len);
-	if (len > 0) {
-		log = (char *)malloc(len);
-		glGetProgramInfoLog(prog, len, &chWrittn, log);
-		std::cout << "Program Info Log: " << log << std::endl;
-		free(log);
-	}
+// ========== Shader 编译与链接 ==========
+
+GLuint Utils::compileShader(GLenum shaderType, const char* shaderPath) {
+	// load shader file from executable directory
+    auto shaderFullPath = getExecutableDir() / shaderPath;
+    auto shaderSrc = readShaderFile(shaderFullPath);
+    auto src = shaderSrc.c_str();
+
+    GLuint shader = glCreateShader(shaderType);
+    glShaderSource(shader, 1, &src, nullptr);
+    glCompileShader(shader);
+
+    GLint compiled;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+    if (!compiled) {
+        std::cerr << std::format("Shader compilation failed: {}\n", shaderPath);
+        printShaderLog(shader);
+    }
+    return shader;
 }
 
-int Utils::finalizeShaderProgram(GLuint sprogram)
-{
-	GLint linked;
-	glLinkProgram(sprogram);
-	checkOpenGLError();
-	glGetProgramiv(sprogram, GL_LINK_STATUS, &linked);
-	if (linked != 1)
-	{
-		std::cout << "linking failed" << std::endl;
-		printProgramLog(sprogram);
-	}
-	return sprogram;
+GLuint Utils::linkShapderProgram(GLuint sprogram) {
+    glLinkProgram(sprogram);
+    GLint linked = 0;
+    glGetProgramiv(sprogram, GL_LINK_STATUS, &linked);
+    if (!linked) {
+        std::cerr << "Shader linking failed\n";
+        printProgramLog(sprogram);
+    }
+    return sprogram;
 }
 
-GLuint Utils::createShaderProgram(const char *vp, const char *fp)
-{
-	GLuint vShader = prepareShader(GL_VERTEX_SHADER, vp);
-	GLuint fShader = prepareShader(GL_FRAGMENT_SHADER, fp);
-	GLuint vfprogram = glCreateProgram();
-	glAttachShader(vfprogram, vShader);
-	glAttachShader(vfprogram, fShader);
-	finalizeShaderProgram(vfprogram);
-	return vfprogram;
+// ========== Shader Program 生成 ==========
+
+GLuint Utils::createShaderProgramImpl(std::initializer_list<std::pair<GLenum, const char*>> shaders) {
+    GLuint program = glCreateProgram();
+    for (auto&& [type, path] : shaders) {
+        GLuint shader = compileShader(type, path);
+        glAttachShader(program, shader);
+    }
+    return linkShapderProgram(program);
 }
 
-GLuint Utils::createShaderProgram(const char *vp, const char *gp, const char *fp) 
-{
-	GLuint vShader = prepareShader(GL_VERTEX_SHADER, vp);
-	GLuint gShader = prepareShader(GL_GEOMETRY_SHADER, gp);
-	GLuint fShader = prepareShader(GL_FRAGMENT_SHADER, fp);
-	GLuint vgfprogram = glCreateProgram();
-	glAttachShader(vgfprogram, vShader);
-	glAttachShader(vgfprogram, gShader);
-	glAttachShader(vgfprogram, fShader);
-	finalizeShaderProgram(vgfprogram);
-	return vgfprogram;
+
+GLuint Utils::createShaderProgram(const char* vp, const char* fp) {
+	return createShaderProgramImpl({
+		{GL_VERTEX_SHADER, vp},
+		{GL_FRAGMENT_SHADER, fp}
+	});
 }
 
-GLuint Utils::createShaderProgram(const char *vp, const char *tCS, const char* tES, const char *fp)
-{
-	GLuint vShader = prepareShader(GL_VERTEX_SHADER, vp);
-	GLuint tcShader = prepareShader(GL_TESS_CONTROL_SHADER, tCS);
-	GLuint teShader = prepareShader(GL_TESS_EVALUATION_SHADER, tES);
-	GLuint fShader = prepareShader(GL_FRAGMENT_SHADER, fp);
-	GLuint vtfprogram = glCreateProgram();
-	glAttachShader(vtfprogram, vShader);
-	glAttachShader(vtfprogram, tcShader);
-	glAttachShader(vtfprogram, teShader);
-	glAttachShader(vtfprogram, fShader);
-	finalizeShaderProgram(vtfprogram);
-	return vtfprogram;
+GLuint Utils::createShaderProgram(const char* vp, const char* gp, const char* fp) {
+    return createShaderProgramImpl({
+        {GL_VERTEX_SHADER, vp},
+        {GL_GEOMETRY_SHADER, gp},
+        {GL_FRAGMENT_SHADER, fp}
+    });
 }
 
-GLuint Utils::createShaderProgram(const char *vp, const char *tCS, const char* tES, char *gp, const char *fp)
-{
-	GLuint vShader = prepareShader(GL_VERTEX_SHADER, vp);
-	GLuint tcShader = prepareShader(GL_TESS_CONTROL_SHADER, tCS);
-	GLuint teShader = prepareShader(GL_TESS_EVALUATION_SHADER, tES);
-	GLuint gShader = prepareShader(GL_GEOMETRY_SHADER, gp);
-	GLuint fShader = prepareShader(GL_FRAGMENT_SHADER, fp);
-	GLuint vtgfprogram = glCreateProgram();
-	glAttachShader(vtgfprogram, vShader);
-	glAttachShader(vtgfprogram, tcShader);
-	glAttachShader(vtgfprogram, teShader);
-	glAttachShader(vtgfprogram, gShader);
-	glAttachShader(vtgfprogram, fShader);
-	finalizeShaderProgram(vtgfprogram);
-	return vtgfprogram;
+GLuint Utils::createShaderProgram(const char* vp, const char* tCS, const char* tES, const char* fp) {
+	return createShaderProgramImpl({
+		{GL_VERTEX_SHADER, vp},
+		{GL_TESS_CONTROL_SHADER, tCS},
+		{GL_TESS_EVALUATION_SHADER, tES},
+		{GL_FRAGMENT_SHADER, fp}
+	});
 }
 
-GLuint Utils::loadCubeMap(const char *mapDir) {
-	GLuint textureRef;
-	std::string xp = mapDir; xp = xp + "/xp.jpg";
-	std::string xn = mapDir; xn = xn + "/xn.jpg";
-	std::string yp = mapDir; yp = yp + "/yp.jpg";
-	std::string yn = mapDir; yn = yn + "/yn.jpg";
-	std::string zp = mapDir; zp = zp + "/zp.jpg";
-	std::string zn = mapDir; zn = zn + "/zn.jpg";
-	textureRef = SOIL_load_OGL_cubemap(xp.c_str(), xn.c_str(), yp.c_str(), yn.c_str(), zp.c_str(), zn.c_str(),
-		SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	if (textureRef == 0) std::cout << "didnt find cube map image file" << std::endl;
-	//	glBindTexture(GL_TEXTURE_CUBE_MAP, textureRef);
-	// reduce seams
-	//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	return textureRef;
+GLuint Utils::createShaderProgram(const char* vp, const char* tCS, const char* tES, char* gp, const char* fp) {
+    return createShaderProgramImpl({
+        {GL_VERTEX_SHADER, vp},
+        {GL_TESS_CONTROL_SHADER, tCS},
+        {GL_TESS_EVALUATION_SHADER, tES},
+        {GL_GEOMETRY_SHADER, gp},
+        {GL_FRAGMENT_SHADER, fp}
+    });
 }
 
-GLuint Utils::loadTexture(const char *texImagePath)
-{
-	GLuint textureRef;
-	textureRef = SOIL_load_OGL_texture(texImagePath, SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
-	if (textureRef == 0) std::cout << "didnt find texture file " << texImagePath << std::endl;
-	// ----- mipmap/anisotropic section
-	glBindTexture(GL_TEXTURE_2D, textureRef);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	if (glewIsSupported("GL_EXT_texture_filter_anisotropic")) {
-		GLfloat anisoset = 0.0f;
-		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &anisoset);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisoset);
-	}
-	// ----- end of mipmap/anisotropic section
-	return textureRef;
+// ========== Texture Loader ==========
+
+GLuint Utils::loadTexture(const char* texImagePath) {
+    GLuint texID = SOIL_load_OGL_texture(texImagePath, SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
+    if (!texID)
+        std::cerr << std::format("Texture not found: {}\n", texImagePath);
+
+    glBindTexture(GL_TEXTURE_2D, texID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    if (glewIsSupported("GL_EXT_texture_filter_anisotropic")) {
+        GLfloat aniso = 0.0f;
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &aniso);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
+    }
+    return texID;
 }
 
 // GOLD material - ambient, diffuse, specular, and shininess
