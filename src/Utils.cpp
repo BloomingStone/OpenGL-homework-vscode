@@ -3,20 +3,25 @@
 #include <SOIL2\soil2.h>
 #include <string>
 #include <iostream>
+#include <sstream>
+#include <filesystem>
 #include <fstream>
 #include <cmath>
 #include <glm\glm.hpp>
 #include <glm\gtc\type_ptr.hpp> // glm::value_ptr
 #include <glm\gtc\matrix_transform.hpp> // glm::translate, glm::rotate, glm::scale, glm::perspective
+#include <windows.h>
 #include "Utils.h"
-using namespace std;
+
 
 Utils::Utils() {}
 
-string Utils::readShaderFile(const char *filePath) {
-	string content;
-	ifstream fileStream(filePath, ios::in);
-	string line = "";
+namespace fs = std::filesystem;
+
+std::string Utils::readShaderFile(fs::path filePath) {
+	std::string content;
+	std::ifstream fileStream(filePath, std::ios::in);
+	std::string line = "";
 	while (!fileStream.eof()) {
 		getline(fileStream, line);
 		content.append(line + "\n");
@@ -29,7 +34,7 @@ bool Utils::checkOpenGLError() {
 	bool foundError = false;
 	int glErr = glGetError();
 	while (glErr != GL_NO_ERROR) {
-		cout << "glError: " << glErr << endl;
+		std::cout << "glError: " << glErr << std::endl;
 		foundError = true;
 		glErr = glGetError();
 	}
@@ -44,15 +49,25 @@ void Utils::printShaderLog(GLuint shader) {
 	if (len > 0) {
 		log = (char *)malloc(len);
 		glGetShaderInfoLog(shader, len, &chWrittn, log);
-		cout << "Shader Info Log: " << log << endl;
+		std::cout << "Shader Info Log: " << log << std::endl;
 		free(log);
 	}
 }
 
 GLuint Utils::prepareShader(int shaderTYPE, const char *shaderPath)
 {
+    #ifdef _WIN32
+        wchar_t  exePath[MAX_PATH];
+        GetModuleFileNameW(NULL, exePath, MAX_PATH);
+        fs::path exeDir = fs::path(exePath).parent_path();
+	#elif __APPLE__
+		fs::path exeDir = fs::path(fs::canonical("/proc/self/exe")).parent_path();
+	#elif __linux__
+		fs::path exeDir = fs::path(fs::canonical("/proc/self/exe")).parent_path();
+    #endif
+
 	GLint shaderCompiled;
-	string shaderStr = readShaderFile(shaderPath);
+	std::string shaderStr = readShaderFile(exeDir / std::string{shaderPath});
 	const char *shaderSrc = shaderStr.c_str();
 	GLuint shaderRef = glCreateShader(shaderTYPE);
 	glShaderSource(shaderRef, 1, &shaderSrc, NULL);
@@ -61,12 +76,12 @@ GLuint Utils::prepareShader(int shaderTYPE, const char *shaderPath)
 	glGetShaderiv(shaderRef, GL_COMPILE_STATUS, &shaderCompiled);
 	if (shaderCompiled != 1)
 	{
-		if (shaderTYPE == 35633) cout << "Vertex ";
-		if (shaderTYPE == 36488) cout << "Tess Control ";
-		if (shaderTYPE == 36487) cout << "Tess Eval ";
-		if (shaderTYPE == 36313) cout << "Geometry ";
-		if (shaderTYPE == 35632) cout << "Fragment ";
-		cout << "shader compilation error." << endl;
+		if (shaderTYPE == 35633) std::cout << "Vertex ";
+		if (shaderTYPE == 36488) std::cout << "Tess Control ";
+		if (shaderTYPE == 36487) std::cout << "Tess Eval ";
+		if (shaderTYPE == 36313) std::cout << "Geometry ";
+		if (shaderTYPE == 35632) std::cout << "Fragment ";
+		std::cout << "shader compilation error." << std::endl;
 		printShaderLog(shaderRef);
 	}
 	return shaderRef;
@@ -80,7 +95,7 @@ void Utils::printProgramLog(int prog) {
 	if (len > 0) {
 		log = (char *)malloc(len);
 		glGetProgramInfoLog(prog, len, &chWrittn, log);
-		cout << "Program Info Log: " << log << endl;
+		std::cout << "Program Info Log: " << log << std::endl;
 		free(log);
 	}
 }
@@ -93,7 +108,7 @@ int Utils::finalizeShaderProgram(GLuint sprogram)
 	glGetProgramiv(sprogram, GL_LINK_STATUS, &linked);
 	if (linked != 1)
 	{
-		cout << "linking failed" << endl;
+		std::cout << "linking failed" << std::endl;
 		printProgramLog(sprogram);
 	}
 	return sprogram;
@@ -157,15 +172,15 @@ GLuint Utils::createShaderProgram(const char *vp, const char *tCS, const char* t
 
 GLuint Utils::loadCubeMap(const char *mapDir) {
 	GLuint textureRef;
-	string xp = mapDir; xp = xp + "/xp.jpg";
-	string xn = mapDir; xn = xn + "/xn.jpg";
-	string yp = mapDir; yp = yp + "/yp.jpg";
-	string yn = mapDir; yn = yn + "/yn.jpg";
-	string zp = mapDir; zp = zp + "/zp.jpg";
-	string zn = mapDir; zn = zn + "/zn.jpg";
+	std::string xp = mapDir; xp = xp + "/xp.jpg";
+	std::string xn = mapDir; xn = xn + "/xn.jpg";
+	std::string yp = mapDir; yp = yp + "/yp.jpg";
+	std::string yn = mapDir; yn = yn + "/yn.jpg";
+	std::string zp = mapDir; zp = zp + "/zp.jpg";
+	std::string zn = mapDir; zn = zn + "/zn.jpg";
 	textureRef = SOIL_load_OGL_cubemap(xp.c_str(), xn.c_str(), yp.c_str(), yn.c_str(), zp.c_str(), zn.c_str(),
 		SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	if (textureRef == 0) cout << "didnt find cube map image file" << endl;
+	if (textureRef == 0) std::cout << "didnt find cube map image file" << std::endl;
 	//	glBindTexture(GL_TEXTURE_CUBE_MAP, textureRef);
 	// reduce seams
 	//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -178,7 +193,7 @@ GLuint Utils::loadTexture(const char *texImagePath)
 {
 	GLuint textureRef;
 	textureRef = SOIL_load_OGL_texture(texImagePath, SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
-	if (textureRef == 0) cout << "didnt find texture file " << texImagePath << endl;
+	if (textureRef == 0) std::cout << "didnt find texture file " << texImagePath << std::endl;
 	// ----- mipmap/anisotropic section
 	glBindTexture(GL_TEXTURE_2D, textureRef);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);

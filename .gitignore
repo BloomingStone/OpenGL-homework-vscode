@@ -36,3 +36,4 @@ build.ninja
 # OS specific
 .DS_Store
 Thumbs.db
+.vscode/ltex.dictionary.en-US.txt

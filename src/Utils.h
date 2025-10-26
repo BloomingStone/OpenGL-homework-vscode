@@ -3,6 +3,9 @@
 #include <SOIL2\soil2.h>
 #include <string>
 #include <iostream>
+#include <sstream>
+#include <filesystem>
+#include <windows.h>
 #include <fstream>
 #include <cmath>
 #include <vector>
@@ -10,10 +13,12 @@
 #include <glm\gtc\type_ptr.hpp>
 #include <glm\gtc\matrix_transform.hpp>
 
+namespace fs = std::filesystem;
+
 class Utils
 {
 private:
-	static std::string readShaderFile(const char *filePath);
+	static std::string readShaderFile(fs::path filePath);
 	static void printShaderLog(GLuint shader);
 	static void printProgramLog(int prog);
 	static GLuint prepareShader(int shaderTYPE, const char *shaderPath);
