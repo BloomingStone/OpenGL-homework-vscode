@@ -25,6 +25,7 @@
 5. 设置环境变量：
    - 设置 VCPKG_ROOT 为 vcpkg 安装目录
    - 设置 将 MinGW 的 bin 目录添加到 PATH 环境变量中
+   - 只有 MinGW 而未安装 Visual Studio 时，需要设置 VCPKG_DEFAULT_TRIPLET 和 VCPKG_DEFAULT_HOST_TRIPLET 为 x64-mingw-static， 为 vcpkg 指定默认三元组
 6. 推荐安装 VSCode 插件：
    1. Vcpkg CMake Tools;
    2. CMake Tools;

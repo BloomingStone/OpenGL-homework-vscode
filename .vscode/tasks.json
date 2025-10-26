@@ -22,7 +22,13 @@
 			},
 			"problemMatcher": [
 				"$msCompile"
-			]
+			],
+			"options": {
+				"env": {
+					"VCPKG_DEFAULT_TRIPLET": "x64-mingw-static",
+					"VCPKG_DEFAULT_HOST_TRIPLET": "x64-mingw-static"
+				}
+			}
 		},
 		{
 			"label": "CMake Build [Debug]",
@@ -65,7 +71,13 @@
 			},
 			"problemMatcher": [
 				"$msCompile"
-			]
+			],
+			"options": {
+				"env": {
+					"VCPKG_DEFAULT_TRIPLET": "x64-mingw-static",
+					"VCPKG_DEFAULT_HOST_TRIPLET": "x64-mingw-static"
+				}
+			}
 		},
 		{
 			"label": "CMake Build [Release]",
