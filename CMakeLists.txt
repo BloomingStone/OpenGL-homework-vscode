@@ -16,6 +16,7 @@ add_executable(
     ${PROJECT_NAME}
     src/main.cpp
     src/Utils.cpp
+    src/Torus.cpp
 )
 
 # 链接库
@@ -39,4 +40,14 @@ add_custom_target(copy_shaders ALL
             ${SHADER_FILES}
             $<TARGET_FILE_DIR:${PROJECT_NAME}>
     COMMENT "Copying shader files to build directory"
+)
+
+# === 复制 assets 文件夹到构建目录 ===
+file(GLOB ASSET_FILES "${CMAKE_SOURCE_DIR}/assets/*")
+
+add_custom_target(copy_assets ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${ASSET_FILES}
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    COMMENT "Copying asset files to build directory"
 )

@@ -1,98 +1,147 @@
 #include <GL\glew.h>
 #include <GLFW\glfw3.h>
-#include <iostream>
+#include <SOIL2\soil2.h>
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <glm\gtc\type_ptr.hpp> // glm::value_ptr
+#include <glm\gtc\matrix_transform.hpp> // glm::translate, glm::rotate, glm::scale, glm::perspective
+#include "Torus.h"
 #include "Utils.h"
 using namespace std;
 
-#define numVAOs 1
-#define numVBOs 2
+float toRadians(float degrees) { return (degrees * 2.0f * 3.14159f) / 360.0f; }
 
-//全局变量
+#define numVAOs 1
+#define numVBOs 4
+
+float cameraX, cameraY, cameraZ;
+float torLocX, torLocY, torLocZ;
 GLuint renderingProgram;
 GLuint vao[numVAOs];
 GLuint vbo[numVBOs];
+GLuint brickTexture;
+float rotAmt = 0.0f;
 
-//导入着色器，初始化窗口
+// variable allocation for display
+GLuint mvLoc, projLoc;
+int width, height;
+float aspect;
+glm::mat4 pMat, vMat, mMat, mvMat;
+
+Torus myTorus(0.5f, 0.2f, 48);
+
+void setupVertices(void) 
+{
+	std::vector<int> ind = myTorus.getIndices();
+	std::vector<glm::vec3> vert = myTorus.getVertices();
+	std::vector<glm::vec2> tex = myTorus.getTexCoords();
+	std::vector<glm::vec3> norm = myTorus.getNormals();
+
+	std::vector<float> pvalues;
+	std::vector<float> tvalues;
+	std::vector<float> nvalues;
+
+	for (int i = 0; i < myTorus.getNumVertices(); i++) {
+		pvalues.push_back(vert[i].x);
+		pvalues.push_back(vert[i].y);
+		pvalues.push_back(vert[i].z);
+		tvalues.push_back(tex[i].s);
+		tvalues.push_back(tex[i].t);
+		nvalues.push_back(norm[i].x);
+		nvalues.push_back(norm[i].y);
+		nvalues.push_back(norm[i].z);
+	}
+	glGenVertexArrays(1, vao);
+	glBindVertexArray(vao[0]);
+	glGenBuffers(numVBOs, vbo);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+	glBufferData(GL_ARRAY_BUFFER, pvalues.size() * 4, &pvalues[0], GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, tvalues.size() * 4, &tvalues[0], GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+	glBufferData(GL_ARRAY_BUFFER, nvalues.size() * 4, &nvalues[0], GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, ind.size() * 4, &ind[0], GL_STATIC_DRAW);
+}
+
 void init(GLFWwindow* window) 
 {
 	renderingProgram = Utils::createShaderProgram("vertShader.glsl", "fragShader.glsl");
+	cameraX = 0.0f; cameraY = 0.0f; cameraZ = 3.0f;
+	torLocX = 0.0f; torLocY = 0.0f; torLocZ = 0.0f;
 
-	float vertices[6] = {
-		-1.0f, -1.0f,
-		0.0f, 1.0f,
-		1.0f, -1.0f
-	};
+	glfwGetFramebufferSize(window, &width, &height);
+	aspect = (float)width / (float)height;
+	pMat = glm::perspective(1.0472f, aspect, 0.1f, 1000.0f);
 
-	float vertexColors[12] = {
-		1.0f, 0.0f, 0.0f, 1.0f,  // red
-		0.0f, 1.0f, 0.0f, 1.0f,  // green
-		0.0f, 0.0f, 1.0f, 1.0f   // blue
-	};
-
-	glGenVertexArrays(numVAOs, vao);
-	glGenBuffers(numVBOs, vbo);
-
-	//绑定当前VAO
-	glBindVertexArray(vao[0]);
-	// Load the data into the GPU  
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	//将VBO关联给顶点着色器中相应的顶点属性
-	GLuint vPositionLoc = glGetAttribLocation(renderingProgram, "vPosition");
-	glVertexAttribPointer(vPositionLoc, 2, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(vPositionLoc);
-
-	// Load the data into the GPU  
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertexColors), vertexColors, GL_STATIC_DRAW);
-	//将VBO关联给顶点着色器中相应的顶点属性
-	GLuint vColorLoc = glGetAttribLocation(renderingProgram, "vColor");
-	glVertexAttribPointer(vColorLoc, 4, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(vColorLoc);
-
+	setupVertices();
+	brickTexture = Utils::loadTexture("brick1.jpg");
 }
-//函数绘制
+
 void display(GLFWwindow* window, double currentTime) 
 {
-	glUseProgram(renderingProgram); 
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
 
-	glClearColor(0.2f, 0.5f, 0.8f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glUseProgram(renderingProgram);
 
-	//绘制模型
-	glBindVertexArray(vao[0]);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	mvLoc = glGetUniformLocation(renderingProgram, "mv_matrix");
+	projLoc = glGetUniformLocation(renderingProgram, "proj_matrix");
+
+	vMat = glm::translate(glm::mat4(1.0f), glm::vec3(-cameraX, -cameraY, -cameraZ));
+	mMat = glm::translate(glm::mat4(1.0f), glm::vec3(torLocX, torLocY, torLocZ));
+	mMat = glm::rotate(mMat, (float)currentTime, glm::vec3(1.0f, 0.0f, 0.0f));
+
+	mvMat = vMat * mMat;
+
+	glUniformMatrix4fv(mvLoc, 1, GL_FALSE, glm::value_ptr(mvMat));
+	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(pMat));
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(1);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, brickTexture);
+
+	glEnable(GL_CULL_FACE);
+	glFrontFace(GL_CCW);
+	glEnable(GL_DEPTH_TEST); //启用深度测试，重要！
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
+	glDrawElements(GL_TRIANGLES, myTorus.getIndices().size(), GL_UNSIGNED_INT, 0);
+}
+
+void window_size_callback(GLFWwindow* win, int newWidth, int newHeight) {
+	aspect = (float)newWidth / (float)newHeight;
+	glViewport(0, 0, newWidth, newHeight);
+	pMat = glm::perspective(1.0472f, aspect, 0.1f, 1000.0f);
 }
 
 int main(void) 
 {
-	//glfw初始化
-	if (!glfwInit()) 
-	{ 
-		exit(EXIT_FAILURE); 
-	}
-	//窗口版本
+	if (!glfwInit()) { exit(EXIT_FAILURE); }
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	//创建窗口
-	GLFWwindow* window = glfwCreateWindow(800, 800, "A triangle", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(800, 800, "Torus", NULL, NULL);
 	glfwMakeContextCurrent(window);
-
-	if (glewInit() != GLEW_OK)//glew初始化
-	{ 
-		exit(EXIT_FAILURE);
-	}
+	if (glewInit() != GLEW_OK) { exit(EXIT_FAILURE); }
 	glfwSwapInterval(1);
 
-	//导入着色器，创建和绑定VAO和VBO
+	glfwSetWindowSizeCallback(window, window_size_callback);
+
 	init(window);
 
-	//事件循环
-	while (!glfwWindowShouldClose(window)) 
-	{
+	while (!glfwWindowShouldClose(window)) {
 		display(window, glfwGetTime());
 		glfwSwapBuffers(window);
 		glfwPollEvents();
