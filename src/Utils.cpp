@@ -142,9 +142,11 @@ GLuint Utils::createShaderProgram(const char* vp, const char* tCS, const char* t
 // ========== Texture Loader ==========
 
 GLuint Utils::loadTexture(const char* texImagePath) {
-    GLuint texID = SOIL_load_OGL_texture(texImagePath, SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
+    auto texFullPath = getExecutableDir() / texImagePath;
+
+    GLuint texID = SOIL_load_OGL_texture(texFullPath.string().c_str(), SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
     if (!texID)
-        std::cerr << std::format("Texture not found: {}\n", texImagePath);
+        std::cerr << std::format("Texture not found: {}\n", texFullPath.string());
 
     glBindTexture(GL_TEXTURE_2D, texID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
