@@ -8,7 +8,7 @@
         "program": "${workspaceFolder}/build/MyGLProject.exe",
         "args": [],
         "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
+        "cwd": "${workspaceFolder}/build",
         "preLaunchTask": "CMake Build [Debug]"
     },
     {
@@ -18,7 +18,7 @@
         "program": "${workspaceFolder}/build/MyGLProject.exe",
         "args": [],
         "stopAtEntry": false,
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}/build"
     },
     {
         "type": "cmake",
