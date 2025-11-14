@@ -19,6 +19,30 @@
 ## 安装
 
 1. [安装 vcpkg](https://learn.microsoft.com/zh-cn/vcpkg/get_started/get-started-vscode?pivots=shell-powershell)
+   - 配置 vcpkg 镜像
+      vcpkg 会从 github 上下载，如果无法访问 github 或链接不稳定，可以配置镜像。推荐使用清华大学开源软件镜像站：首先打开 `<your_path_to_vcpkg>\scripts\bootstrap.ps1` 文件，然后将以下
+      ```powershell
+      if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64' -or $env:PROCESSOR_IDENTIFIER -match "ARMv[8,9] \(64-bit\)") {
+       & "$scriptsDir/tls12-download-arm64.exe" github.com "/microsoft/vcpkg-tool/releases/download/$versionDate/vcpkg-arm64.exe" "$vcpkgRootDir\vcpkg.exe"
+      } else {
+         & "$scriptsDir/tls12-download.exe" github.com "/microsoft/vcpkg-tool/releases/download/$versionDate/vcpkg.exe" "$vcpkgRootDir\vcpkg.exe"
+      }
+
+      Write-Host ""
+
+      if ($LASTEXITCODE -ne 0)
+      {
+         Write-Error "Downloading vcpkg.exe failed. Please check your internet connection, or consider downloading a recent vcpkg.exe from https://github.com/microsoft/vcpkg-tool with a browser."
+         throw
+      }
+      ```
+      中的 `github.com` 替换为 `mirrors.tuna.tsinghua.edu.cn`, 将 `/microsoft/` 替换为 `/git/`。
+      （镜像站 URL 为：`mirrors.tuna.tsinghua.edu.cn/git/vcpkg-tool`）
+
+      如果要使用其他镜像站，替换逻辑同理。
+
+   - vcpkg 同时还可能需要依赖 [powershell7](https://apps.microsoft.com/detail/9MZ1SNWT0N5D?hl=neutral&gl=CN&ocid=pdpshare) 和 [7zip](https://www.7-zip.org), 如果连接 github 失败导致这两个工具无法下载，可提前安装最新版本。
+  
 2. [安装 cmake](https://cmake.org/download/)
 3. [安装 ninja](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages)
    - 一般在 Windows 上可以使用 WinGet 安装: `winget install Ninja-build.Ninja`
@@ -31,29 +55,6 @@
    1. Vcpkg CMake Tools;
    2. CMake Tools;
    3. CMake;
-7. 配置 vcpkg 镜像（无法连接 github 时）
-   vcpkg 会从 github 上下载源码并编译，如果无法访问 github 或链接不稳定，可以配置镜像。推荐使用清华大学开源软件镜像站：首先打开 `<your_path_to_vcpkg>\scripts\bootstrap.ps1` 文件，然后将以下
-   ```powershell
-   if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64' -or $env:PROCESSOR_IDENTIFIER -match "ARMv[8,9] \(64-bit\)") {
-    & "$scriptsDir/tls12-download-arm64.exe" github.com "/microsoft/vcpkg-tool/releases/download/$versionDate/vcpkg-arm64.exe" "$vcpkgRootDir\vcpkg.exe"
-   } else {
-      & "$scriptsDir/tls12-download.exe" github.com "/microsoft/vcpkg-tool/releases/download/$versionDate/vcpkg.exe" "$vcpkgRootDir\vcpkg.exe"
-   }
-
-   Write-Host ""
-
-   if ($LASTEXITCODE -ne 0)
-   {
-      Write-Error "Downloading vcpkg.exe failed. Please check your internet connection, or consider downloading a recent vcpkg.exe from https://github.com/microsoft/vcpkg-tool with a browser."
-      throw
-   }
-   ```
-   中的 `github.com` 替换为 `mirrors.tuna.tsinghua.edu.cn`, 将 `/microsoft/` 替换为 `/git/`。
-   （镜像站 URL 为：`mirrors.tuna.tsinghua.edu.cn/git/vcpkg-tool`）
-
-   如果要使用其他镜像站，替换逻辑同理。
-
-   vcpkg 同时还可能需要依赖 [powershell7](https://apps.microsoft.com/detail/9MZ1SNWT0N5D?hl=neutral&gl=CN&ocid=pdpshare) 和 [7zip](https://www.7-zip.org), 如果连接 github 失败导致这两个工具无法下载，请提前安装最新版本。
 
 ## 构建与运行
 
