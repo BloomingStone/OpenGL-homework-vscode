@@ -1,4 +1,8 @@
 #pragma once
+#include <string>
+#include <filesystem>
+#include <optional>
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <SOIL2/soil2.h>
@@ -6,15 +10,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <string>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <filesystem>
-#include <vector>
-#include <array>
-#include <format>
-#include <stdexcept>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -33,6 +28,7 @@ private:
     static GLuint compileShader(GLenum shaderType, const char* shaderPath);
     static GLuint linkShapderProgram(GLuint sprogram);
     static fs::path getExecutableDir();
+    static std::optional<fs::path> tryFindShaderFile(const fs::path&& filePath);
 
 public:
     Utils() = default;
