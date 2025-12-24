@@ -1,4 +1,10 @@
 #include "Utils.h"
+#include <filesystem>
+#include <iostream>
+#include <fstream>
+#include <format>
+#include <optional>
+#include <stdexcept>
 
 namespace fs = std::filesystem;
 
@@ -63,10 +69,42 @@ void Utils::printProgramLog(GLuint prog) {
 
 // ========== Shader 编译与链接 ==========
 
+std::optional<fs::path> Utils::tryFindShaderFile(const fs::path&& inputPath) {
+    auto findedFile = fs::path{inputPath};
+    if (fs::exists(findedFile))
+        return findedFile;
+    
+    auto exeDir = getExecutableDir();
+    findedFile = exeDir / inputPath.string();   // try relative path
+    if (fs::exists(findedFile))
+        return findedFile;
+
+    auto shaderName = inputPath.filename().string();
+    findedFile = exeDir / shaderName;   // try relative path with just filename
+    if (fs::exists(findedFile))
+        return findedFile;
+
+    for (const auto& entry : fs::recursive_directory_iterator(exeDir)) {
+        // search recursively in the exe dir
+        if (!entry.is_regular_file())
+            continue;
+
+        if (entry.path().filename() == shaderName) {
+            findedFile = entry.path();
+            return findedFile;      // return the first finded file with the same name
+        }
+    }
+    return std::nullopt;    // not finded
+}
+
 GLuint Utils::compileShader(GLenum shaderType, const char* shaderPath) {
-	// load shader file from executable directory
-    auto shaderFullPath = getExecutableDir() / shaderPath;
-    auto shaderSrc = readShaderFile(shaderFullPath);
+    auto findedFile = tryFindShaderFile(shaderPath);
+    if ( ! findedFile) {
+        std::cerr << std::format("Shader file not found: {}\n", shaderPath);
+        return 0;
+    }
+
+    auto shaderSrc = readShaderFile(findedFile.value());
     auto src = shaderSrc.c_str();
 
     GLuint shader = glCreateShader(shaderType);
@@ -95,6 +133,15 @@ GLuint Utils::linkShapderProgram(GLuint sprogram) {
 
 // ========== Shader Program 生成 ==========
 
+/*
+@param shaders 初始化列表，每个元素是一个 pair，包含着色器类型和文件路径
+@return 着色器程序对象
+e.g.:
+	createShaderProgram({
+		{GL_VERTEX_SHADER, "shaders/shader.vert"},
+		{GL_FRAGMENT_SHADER, "shaders/shader.frag"}
+	});
+*/
 GLuint Utils::createShaderProgramImpl(std::initializer_list<std::pair<GLenum, const char*>> shaders) {
     GLuint program = glCreateProgram();
     for (auto&& [type, path] : shaders) {
