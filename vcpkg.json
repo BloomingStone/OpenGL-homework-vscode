@@ -1,9 +1,0 @@
-{
-  "dependencies": [
-    "glew",
-    "glfw3",
-    "glm",
-    "soil2",
-    "fmt"
-  ]
-}

@@ -1,65 +1,166 @@
-# 介绍
+# OpenGL xmake Clang/Mingw Template
 
-一个使用 vcpkg + cmake + ninja 配置的 OpenGL 示例项目. 
-目前使用的是 MinGW 编译器. 如果使用其他编译器需要自行修改 cmake 与 vcpkg 配置：
-1. `.vscode/settings.json` 中修改 为 MSVC 或其他编译器，对应后续 构建与运行 中的方法 2 3 4. 也可以在左侧 Vcpkg CMake Tools （如果安装了） 的 PORTS EXPLORER 窗格中选择对应的配置
-   
-   ```json
-   "vcpkg.target.defaultTriplet": "x64-mingw-static",
-   "vcpkg.target.hostTriplet": "x64-mingw-static",
-   ```
+一个使用 xmake 构建系统，从而可以支持 MSVC, Clang 和 MinGW 编译器的 OpenGL 项目模板。
 
-2. `CMakeUserPresets.json` 同样修改为对应编译器，对应后续 构建与运行 中的方法 1 
-   ```json
-   "VCPKG_TARGET_TRIPLET": "x64-mingw-static"
-   ```
+## 项目概述
 
-# 使用
+此项目是一个简单的 OpenGL 示例，展示了一个彩色三角形的渲染。它使用现代 OpenGL（4.3）和以下库：
 
-## 安装
+- GLFW：窗口和输入管理
+- GLEW：OpenGL 扩展加载
+- GLM：数学库
+- SOIL2：图像加载（用于纹理）
 
-1. [安装 vcpkg](https://learn.microsoft.com/zh-cn/vcpkg/get_started/get-started-vscode?pivots=shell-powershell)
-   - 配置 vcpkg 镜像
-      vcpkg 会从 github 上下载，如果无法访问 github 或链接不稳定，可以配置镜像。推荐使用清华大学开源软件镜像站：首先打开 `<your_path_to_vcpkg>\scripts\bootstrap.ps1` 文件，然后将以下
-      ```powershell
-      if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64' -or $env:PROCESSOR_IDENTIFIER -match "ARMv[8,9] \(64-bit\)") {
-       & "$scriptsDir/tls12-download-arm64.exe" github.com "/microsoft/vcpkg-tool/releases/download/$versionDate/vcpkg-arm64.exe" "$vcpkgRootDir\vcpkg.exe"
-      } else {
-         & "$scriptsDir/tls12-download.exe" github.com "/microsoft/vcpkg-tool/releases/download/$versionDate/vcpkg.exe" "$vcpkgRootDir\vcpkg.exe"
-      }
+## 构建系统
 
-      Write-Host ""
+项目使用 [xmake](https://xmake.io/) 作为构建系统，可选编译器配置为：
 
-      if ($LASTEXITCODE -ne 0)
-      {
-         Write-Error "Downloading vcpkg.exe failed. Please check your internet connection, or consider downloading a recent vcpkg.exe from https://github.com/microsoft/vcpkg-tool with a browser."
-         throw
-      }
-      ```
-      中的 `github.com` 替换为 `mirrors.tuna.tsinghua.edu.cn`, 将 `/microsoft/` 替换为 `/git/`。
-      （镜像站 URL 为：`mirrors.tuna.tsinghua.edu.cn/git/vcpkg-tool`）
+1. **MSVC**：visual sutdio 默认编译器
+2. **Clang (clang, clang-cl)**：提供更好的报错信息
+3. **MinGW**：GNU 工具链
 
-      如果要使用其他镜像站，替换逻辑同理。
+### 前提条件
 
-   - vcpkg 同时还可能需要依赖 [powershell7](https://apps.microsoft.com/detail/9MZ1SNWT0N5D?hl=neutral&gl=CN&ocid=pdpshare) 和 [7zip](https://www.7-zip.org), 如果连接 github 失败导致这两个工具无法下载，可提前安装最新版本。
-  
-2. [安装 cmake](https://cmake.org/download/)
-3. [安装 ninja](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages)
-   - 一般在 Windows 上可以使用 WinGet 安装: `winget install Ninja-build.Ninja`
-4. [安装 MinGW](https://github.com/skeeto/w64devkit)
-5. 设置环境变量：
-   - 设置 VCPKG_ROOT 为 vcpkg 安装目录
-   - 设置 将 MinGW 的 bin 目录添加到 PATH 环境变量中
-   - 只有 MinGW 而未安装 Visual Studio 时，需要设置 VCPKG_DEFAULT_TRIPLET 和 VCPKG_DEFAULT_HOST_TRIPLET 为 x64-mingw-static， 为 vcpkg 指定默认三元组
-6. 推荐安装 VSCode 插件：
-   1. Vcpkg CMake Tools;
-   2. CMake Tools;
-   3. CMake;
+#### 1. 安装 xmake
+请参考 [xmake 安装指南](https://xmake.io/#/guide/installation)
 
-## 构建与运行
+#### 2. 选择编译器
 
-1. 可以直接 shell / CMD 中进入当前目录，或者在 VSCode 中进入终端，然后运行 `cmake --preset=default; cmake --build .\build --clean-first; .\build\MyGLProject.exe`. 相关设定在 `CMakeLists.txt`, `CMakePressets.json`, `CMakeUserPresets.json` 中
-2. 在 VSCode 中 ctl+p 打开命令面板，输入 `cmake: build` 安装项目，然后`.\build\MyGLProject.exe` 运行项目
-3. 在 VSCode 中 ctl+p 打开命令面板, 输入 `Run Task` 选择需要运行的项目
-4. 在 VSCode 中 通过运行和调试 (ctl + shift + d) 构建 debug 项目并运行或调试
-   - 以上 2 3 4 的配置在 `.vscode/tasks.json` 和 `.vscode/launch.json` 中
+**MSVC**
+官网下载 [Visual Studio](https://visualstudio.microsoft.com/zh-hans/)
+
+**Clang (版本 ≥19.0.0)**
+```bash
+# Windows 上推荐使用 LLVM 发行版
+# 下载地址：https://github.com/llvm/llvm-project/releases
+# 确保 clang-cl 在 PATH 中
+# 验证安装
+clang-cl --version
+```
+
+**MinGW**
+```bash
+# 1. 下载 MinGW-w64
+#    地址：https://github.com/niXman/mingw-builds-binaries/releases
+
+# 2. 将 MinGW 的 bin 目录添加到 PATH
+#    例如：C:\mingw64\bin
+
+# 3. 验证安装
+g++ --version
+```
+
+### 构建步骤
+
+### 配置项目
+
+```bash
+# 1. 若指定使用 MSVC
+xmake f -p windows -a x64 -m release --toolchain=msvc -y
+
+# 2. 若指定使用 Clang
+xmake f -p windows -a x64 -m release --toolchain=clang -y    # GNU ABI 或
+xmake f -p windows -a x64 -m release --toolchain=clang-cl -y  # MSVC ABI
+
+# 3. 若指定使用 MinGW
+xmake f -p mingw -a x86_64 -m release --toolchain=mingw -y
+```
+
+若不指定则默认使用平台对应的编译器，对于 windows 平台默认使用 MSVC
+下载库需要链接到github, 如有需要可设置代理或镜像，参考 [xmake 网络优化](https://xmake.io/zh/guide/package-management/network-optimization.html)
+
+### 构建与运行
+
+```bash
+# 构建项目
+xmake
+
+# 运行程序
+xmake run
+```
+
+### 常用命令
+
+```bash
+# 清理构建
+xmake clean
+
+# 重新配置并构建
+xmake f -c
+xmake
+
+# 调试构建
+xmake f -m debug
+xmake
+
+# 运行调试版本
+xmake run -d
+
+# 生成 compile_commands.json（用于 clangd）
+xmake project -k compile_commands
+```
+
+## 项目结构
+
+```
+.
+├── xmake.lua          # xmake 构建配置
+├── src/
+│   ├── main.cpp      # 主程序入口
+│   ├── Utils.h       # 工具类头文件
+│   └── Utils.cpp     # 工具类实现
+├── shaders/
+│   ├── vertShader.glsl  # 顶点着色器
+│   └── fragShader.glsl  # 片段着色器
+├── compile_commands.json # 自动生成，用于 IDE 智能提示
+└── build/            # 构建输出目录（在 .gitignore 中）
+```
+
+## 依赖管理
+
+所有依赖通过 xmake 的包管理自动下载和构建：
+
+```lua
+-- Clang 配置
+add_requires("glfw", {configs = {shared = false}})    -- shared = false 表示静态链接
+add_requires("glew", {configs = {shared = false}})
+add_requires("glm", {configs = {shared = false}})
+add_requires("soil2", {configs = {shared = false}})
+
+-- MinGW 配置（指定平台）
+add_requires("glfw", {configs = {shared = false, plat = "mingw"}})
+add_requires("glew", {configs = {shared = false, plat = "mingw"}})
+add_requires("glm", {configs = {plat = "mingw"}})
+add_requires("soil2", {configs = {shared = false, plat = "mingw"}})
+```
+
+## IDE 配置（VS Code）
+
+推荐安装 clangd 和 XMake 插件
+
+1. **生成 compile_commands.json**
+   - 手动生成：`xmake project -k compile_commands` 有相关include信息
+
+2. **配置 clangd**
+   - 安装 VS Code 的 clangd 扩展
+   - 如果 `compile_commands.json` 存在，clangd 会自动使用它
+   - 如果未成功识别，重启 clangd：Ctrl+P 输入 `clangd: restart`
+
+3. vscode xmake 插件
+   - 安装后 vscode 最下方会出现构建相关的工具栏，可以选择构架、编译模式等
+   ![vscode-XMake-toolbar](images\vscode-XMake-toolbar.png)
+   - 如果安装后未出现，可以点击资源管理器中的`xmake.lua`，此后可能显示
+
+### 参考链接
+- [xmake IDE 集成插件](https://xmake.io/guide/extensions/ide-integration-plugins.html#configure-intellsence)
+- [clangd 官方文档](https://clangd.llvm.org/)
+
+## 许可证
+
+本项目仅供学习使用。相关库的许可证请参考各自的项目页面。
+
+## 故障排除
+
+### Clang 版本问题
+确保使用 Clang 19.0.0 或更高版本以避免与 MSVC STL 的兼容性问题。
+

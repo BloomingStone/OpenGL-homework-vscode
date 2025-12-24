@@ -4,6 +4,9 @@
 /CMakeFiles/
 /CMakeCache.txt
 
+# xmake
+/.xmake/
+
 # vcpkg
 /vcpkg_installed/
 
@@ -22,13 +25,13 @@
 *.obj
 *.o
 
-# CMake generated
+# CMake generated (legacy)
 cmake_install.cmake
 CMakeCache.txt
 *.cmake
 !CMakeLists.txt
 
-# Ninja build files
+# Ninja build files (legacy)
 .ninja_deps
 .ninja_log
 build.ninja
@@ -37,3 +40,7 @@ build.ninja
 .DS_Store
 Thumbs.db
 .vscode/ltex.dictionary.en-US.txt
+
+# clangd
+/.cache/
+compile_commands.json
