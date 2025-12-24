@@ -159,6 +159,10 @@ add_requires("soil2", {configs = {shared = false, plat = "mingw"}})
 
 本项目仅供学习使用。相关库的许可证请参考各自的项目页面。
 
+## 可选分支配置
+可选 `cmake+vcpkg+ninja+mingw` 分支以使用对应构建配置
+
+
 ## 故障排除
 
 ### Clang 版本问题
