@@ -148,7 +148,7 @@ add_requires("soil2", {configs = {shared = false, plat = "mingw"}})
 
 3. vscode xmake 插件
    - 安装后 vscode 最下方会出现构建相关的工具栏，可以选择构架、编译模式等
-   ![vscode-XMake-toolbar](images\vscode-XMake-toolbar.png)
+   ![vscode-XMake-toolbar](./images/vscode-XMake-toolbar.png)
    - 如果安装后未出现，可以点击资源管理器中的`xmake.lua`，此后可能显示
 
 ### 参考链接
